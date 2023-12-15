@@ -35,21 +35,23 @@ grid;
 
 
 
-%% FFT using SiSy
+%% FFT
 clear; close all; clc;
 
 sisyObj = SiSy; % Init SiSy Object
-sisyObj = sisyObj.addWav("dtmf_signal.wav", 1/20); % Second param is the period length in seconds
-[t,s,f,N] = sisyObj.getSignal(); % Get the signal and its frequency and sammple amount
-[sisyObj, t_p, s_p, fft_f, fft_s] = sisyObj.getFFT(N/21*19); % Get the fft-transformed function
+sisyObj = sisyObj.addWav("aufgabe_4.wav"); % Second param is the period length in seconds
+[t,s,f,N] = sisyObj.getSignal(); % Get the signal and its frequency and sample amount
+%[sisyObj, t_p, s_p, fft_f, fft_s] = sisyObj.getFFT(N/10, N/10*3.5); % Get the fft-transformed function
+[sisyObj, t_p, s_p, fft_f, fft_s] = sisyObj.getFFT(); % Get the fft-transformed function
 
 disp(sisyObj); % Show values of the sisy object
 
 subplot(3,1,1), plot(t,s);grid; % Plot signal
+xlabel('t'); ylabel('s(t)');
 subplot(3,1,2), plot(t_p,s_p);grid; % Plot part signal
+xlabel('t'); ylabel('s(t)');
 subplot(3,1,3), plot(fft_f,fft_s);grid; % Plot fft signal
-
-grid;
+xlabel('f'); ylabel('fft');
 
 
 
@@ -102,37 +104,68 @@ clear; close all; clc;
 
 % Parameter
 f0 = 1;     % Frequency
-N = 2000;   % Amount of samples
-fs = 1000;  % Sampling Frequency
+N = 1000;
+t = [0:N-1]*(f0/N);   % Time 
+fs = f0*N;
 
-t = [0:N-1]*(2/2000);   % Time 
+%s=sign(sin(2.0*pi*f0*(t-0.4)))+sin(t); %Rechtecksignal
+%s = cos(2*pi*f0*t);
+s = sin(2*pi*f0*t);
 
-s=sign(sin(2*pi*f0*(t-0.4)))+sin(t); %Rechtecksignal
-
-N_coeff = 32; % Amount of Ak, Bk and Mk coefficients
+N_coeff = 10; % Amount of Ak, Bk and Mk coefficients
 
 sisyObj = SiSy; % Init SiSy Object
-sisyObj = sisyObj.setSignal(s, fs); % Second param is the period length in seconds
+sisyObj = sisyObj.setSignal(s, fs,N); % Second param is the period length in seconds
 %sisyObj = sisyObj.setSignal(s, fs, 1000, 500); % ATTENTION! MIGHT BE BUGGY! Second param is the period length in seconds
 [t2,s2,fs,N] = sisyObj.getSignal(); % Get the signal and its frequency and sammple amount
 
-[sisyObj, ct, cs, aS, aSA, aSB, Ak, Bk, Mk] = sisyObj.getFourierCoefficients(N_coeff);
+[sisyObj, ct, cs, aS, aSA, aSB, Ak, Bk, Mk, ck, Pk] = sisyObj.getFourierCoefficients(N_coeff);
 
 disp(sisyObj); % Show values of the sisy object
 
-subplot(4,2,1), plot(t2,s2); % Plot signal
+subplot(5,2,1), plot(t2,s2); % Plot signal
 grid; xlabel('t / s'); ylabel('s(t)');
-subplot(4,2,2), plot(ct,cs); % Plot signal
+subplot(5,2,3), plot(ct,cs); % Plot signal
 grid; xlabel('t / s'); ylabel('part of s(t)');
-subplot(4,2,3), plot(ct,aS); % Plot approximated signal
+subplot(5,2,5), plot(ct,aS); % Plot approximated signal
 grid; xlabel('t / s'); ylabel('Approximated part of s(t)');
-subplot(4,2,5), plot(ct,aSA); % Plot A-part signal
-grid; xlabel('t / s'); ylabel('A-part');
-subplot(4,2,7), plot(ct,aSB); % Plot B-part signal
-grid; xlabel('t / s'); ylabel('B-part');
-subplot(4,2,4), stem([1:sisyObj.coeff_N],Ak); hold on; % Plot B-part signal
-grid; xlabel('t / s'); ylabel('Ak');
-subplot(4,2,6), stem([1:sisyObj.coeff_N],Bk); % Plot B-part signal
-grid; xlabel('t / s'); ylabel('Bk');
-subplot(4,2,8), stem([1:sisyObj.coeff_N],Mk); % Plot B-part signal
-grid; xlabel('t / s'); ylabel('Mk');
+subplot(5,2,7), plot(ct,aSA, ct, aSB); % Plot A-part signal
+grid; xlabel('t / s'); ylabel('A-part / B-part'); legend('Cos (A)','Sin (B)');
+subplot(5,2,2), stem([1:sisyObj.coeff_N]-1,Ak); % Plot Ak values
+grid; xlabel('Index * f0'); ylabel('Ak');
+subplot(5,2,4), stem([1:sisyObj.coeff_N]-1,Bk); % Plot Bk values
+grid; xlabel('Index * f0'); ylabel('Bk');
+subplot(5,2,6), stem([1:sisyObj.coeff_N]-1,Mk); % Plot Mk values
+grid; xlabel('Index * f0'); ylabel('Mk');
+subplot(5,2,8), stem([1:sisyObj.coeff_N]-1,Pk); % Plot Pk values
+grid; xlabel('Index * f0'); ylabel('Pk');
+% ATTENTION!!! ck may have wrong values!!!
+subplot(5,2,9), stem([1:sisyObj.coeff_N]-1,abs(ck)); % Plot abs(ck) values
+grid; xlabel('Index * f0'); ylabel('|ck|');
+subplot(5,2,10), stem([1:sisyObj.coeff_N]-1,angle(ck)); % Plot arg(ck) values
+grid; xlabel('Index * f0'); ylabel('arg(ck)');
+
+
+
+%% Bode plot (IN WORK)
+
+tau = [-15:0.1:15];
+fg = 1/(2*pi*tau);
+
+
+
+% Plot Bode magnitude
+subplot(2,1,1);
+semilogx(w, 20*log10(mag)); % Convert to dB
+grid on;
+title('Bode Magnitude Plot');
+xlabel('Frequency (rad/s)');
+ylabel('Magnitude (dB)');
+
+% Plot Bode phase
+subplot(2,1,2);
+semilogx(w, phase);
+grid on;
+title('Bode Phase Plot');
+xlabel('Frequency (rad/s)');
+ylabel('Phase (degrees)');

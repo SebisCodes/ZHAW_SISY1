@@ -46,10 +46,20 @@ classdef SiSy
         coeff_Ak (1,:) double % Ak coefficients
         coeff_Bk (1,:) double % Bk coefficients
         coeff_Mk (1,:) double % Mk coefficients
+        coeff_ck (1,:) double % ck coefficients
         coeff_N uint64 % Amount of coefficients
         coeff_y (1,:) double % Approximated function
         coeff_yA (1,:) double % Approximated function using only A-coefficients
         coeff_yB (1,:) double % Approximated function using only B-coefficients
+        coeff_Pk (1,:) double % The Power of your signal (DC: k=1, AC: k>1)
+
+        % Bode
+        bode_t (1,:) double % The time vector of the bode functions
+        bode_in (1,:) double % The input values of the filter function
+        bode_out (1,:) double % The output values of the filter function
+        bode_f (1,:) double % The frequencies of the bode plot
+        bode_H (1,:) double % The values of the bode function
+        bode_phase (1,:) double % The phase of the bode magnitude
     end
     
     methods
@@ -65,6 +75,9 @@ classdef SiSy
                 offset uint64 = 0
             end
             [obj.o_s,obj.o_fs] = audioread(path);
+            if samplesPerPeriod == 0
+                samplesPerPeriod = length(obj.o_s);
+            end
             obj = obj.setSignal(obj.o_s, obj.o_fs,samplesPerPeriod, offset);
         end
 
@@ -211,7 +224,7 @@ classdef SiSy
             conv_s = obj.conv_s;
         end
 
-        function [obj, coeff_t, coeff_s, approx_s, approx_sA, approx_sB, Ak, Bk, Mk] = getFourierCoefficients(obj, N_coefficients, offset, N)
+        function [obj, coeff_t, coeff_s, approx_s, approx_sA, approx_sB, Ak, Bk, Mk, ck, Pk] = getFourierCoefficients(obj, N_coefficients, offset, N)
             arguments
                 obj
                 N_coefficients uint64 = 11 % Amount of fourier-coefficients to calculate
@@ -226,16 +239,23 @@ classdef SiSy
             obj.coeff_Ak = zeros(1,obj.coeff_N);
             obj.coeff_Bk = zeros(1,obj.coeff_N);
             obj.coeff_Mk = zeros(1,obj.coeff_N);
+            obj.coeff_ck = zeros(1,obj.coeff_N);
+            obj.coeff_Pk = zeros(1,obj.coeff_N);
             %obj.coeff_Ak(1) = mean(obj.coeff_s)*2;
             for k = 1:obj.coeff_N
                 for n = 1:N
                     obj.coeff_Ak(k) = obj.coeff_Ak(k) + obj.coeff_s(n)*cos(2.0*pi*double((k-1)*n)/double(N));
                     obj.coeff_Bk(k) = obj.coeff_Bk(k) + obj.coeff_s(n)*sin(2.0*pi*double((k-1)*n)/double(N));
+                    obj.coeff_ck(k) = obj.coeff_ck(k) + obj.coeff_s(n)*exp(-1i*2.0*pi*double((k-1)*n)/double(N));
+                    %obj.coeff_ck(k) = obj.coeff_ck(k) + obj.coeff_s(n)*exp(-1i*2.0*pi*double((k-1)*n)/double(N)*(obj.coeff_t(n)-obj.o_Tp/2));
                 end
                 obj.coeff_Ak(k)=(2.0/double(N))*obj.coeff_Ak(k);
                 obj.coeff_Bk(k)=(2.0/double(N))*obj.coeff_Bk(k);
                 obj.coeff_Mk(k)=sqrt(obj.coeff_Ak(k)^2+obj.coeff_Bk(k)^2);
+                obj.coeff_Pk(k) = obj.coeff_Mk(k)^2/2.0;
             end
+            obj.coeff_Mk(1) = obj.coeff_Ak(1)/2.0;
+            obj.coeff_Pk(1) = obj.coeff_Mk(1)^2;
             obj.coeff_y = zeros(1,N);
             obj.coeff_yA = zeros(1,N);
             obj.coeff_yB = zeros(1,N);
@@ -258,9 +278,38 @@ classdef SiSy
             Ak = obj.coeff_Ak;
             Bk = obj.coeff_Bk;
             Mk = obj.coeff_Mk;
+            ck = obj.coeff_ck;
+            Pk = obj.coeff_Pk;
             approx_s = obj.coeff_y;
             approx_sA = obj.coeff_yA;
             approx_sB = obj.coeff_yB;
+        end
+
+        function [obj, bode_t, bode_f, bode_H, bode_phase] = getBodeFunction(obj, outputFunction, offset, N)
+            arguments
+                obj
+                outputFunction (1,:) double % The output function
+                offset uint64 = obj.o_offset % The offset to your signal x(offset:offset+N-1)
+                N uint64 = obj.o_Np % The amount of samples from the offset x(offset:offset+N-1)
+            end
+            offset = offset + 1;
+            obj.bode_t = obj.o_t(offset:offset+N-1);
+            obj.bode_in = obj.o_s(offset:offset+N-1);
+            obj.bode_out = outputFunction;
+            
+            Xs = laplace(obj.bode_in); % Laplace Transform of the input
+            Ys = laplace(obj.bode_out); % Laplace Transform of the output
+            
+            Hs = Ys / Xs;
+            [mag,phase,w] = bode(Hs);
+            obj.bode_H = mag;
+            obj.bode_phase = phase;
+            obj.bode_f = w;
+
+            bode_t = obj.bode_t;
+            bode_f = obj.bode_f;
+            bode_H = obj.bode_H;
+            bode_phase = obj.bode_phase;
         end
     end
 end
