@@ -7,8 +7,9 @@
 clear; close all; clc;
 
 sisyObj = SiSy; % Init SiSy Object
-sisyObj = sisyObj.addWav("dtmf_signal.wav", 1/20); % Second param is the period length in seconds
+sisyObj = sisyObj.addWav("aufgabe_1.wav"); % Second param is the period length in seconds
 [t,s,f,N] = sisyObj.getSignal(); % Get the signal and its frequency and sammple amount
+sisyObj = sisyObj.addWav("aufgabe_1.wav", N/5, N/5*2);
 
 disp(sisyObj); % Show values of the sisy object
 
