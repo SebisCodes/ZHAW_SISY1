@@ -137,8 +137,10 @@ classdef SiSy
             end
             offset = offset + 1;
             obj.o_P = 0;
-            for n = offset:offset+N-1
-                obj.o_P = obj.o_P + obj.o_s(n)*obj.o_s(n);
+            for n = 1:N-1
+                n_offset = n+offset;
+                addVal =  (obj.o_s(n_offset-1)^2)*(obj.o_t(n_offset)-obj.o_t(n_offset-1))+((obj.o_s(n_offset)^2)-(obj.o_s(n_offset-1)^2))*(obj.o_t(n_offset)-obj.o_t(n_offset-1))/2;
+                obj.o_P = obj.o_P + addVal;
             end
             obj.o_P = obj.o_P / obj.o_Tp;
             obj.o_rms = sqrt(obj.o_P);
@@ -316,7 +318,7 @@ classdef SiSy
             
             Xs = laplace(obj.bode_in); % Laplace Transform of the input
             Ys = laplace(obj.bode_out); % Laplace Transform of the output
-            
+
             Hs = Ys / Xs;
             [mag,phase,w] = bode(Hs);
             obj.bode_H = mag;
