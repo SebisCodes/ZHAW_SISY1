@@ -31,6 +31,7 @@ classdef SiSy
         % Fourier
         fft_N uint64 % Amount of samples x(start:start+N-1);
         fft_start uint64 % Start value of array to create fft x(start:start+N-1)
+        fft_end uint64 % End  value of array to create fft x(start:start+N-1)
         fft_s (1,:) double % The part of the function to create the fft
         fft_t (1,:) double % The part of the time value to create the fft
         fft_y (1,:) double % The fft function value
@@ -111,6 +112,20 @@ classdef SiSy
             [obj, obj.o_integral_t, obj.o_integral_s, obj.o_area, obj.o_absarea] = obj.getIntegral();
             [obj, obj.fft_t, obj.fft_s, obj.fft_f, obj.fft_y] = obj.getFFT();
         end
+
+        %% Get a part of a function by amount of values and offset
+        function [s_p, s_start, s_end] = getPartOf(obj, s, N, offset)
+            arguments
+                obj
+                s (1,:) double % The values which you want to get the part from
+                N uint64 % The amount of samples from the offset x(offset:offset+N-1)
+                offset uint64 = 0 % The offset to your signal
+            end
+            s_start = offset + 1;
+            s_end = s_start + N - 1;
+            s_p = s(s_start:s_end);
+        end
+        
 
         %% Get rms and power of the signal by index offset
         % (use getIndexOffsetByTime to convert time to an offset)
@@ -196,12 +211,14 @@ classdef SiSy
                 offset uint64 = obj.o_offset % The offset to your signal x(offset:offset+N-1)
                 N uint64 = obj.o_Np % The amount of samples from the offset x(offset:offset+N-1)
             end
+            [,obj.fft_start,obj.fft_end]
             offset = offset + 1;
             obj.fft_start = offset;
+            obj.fft_end = obj.fft_start+obj.fft_N-1;
             obj.fft_N = N;
-            obj.fft_t = obj.o_t(obj.fft_start:obj.fft_start+obj.fft_N-1);
+            obj.fft_t = obj.o_t(obj.fft_start:obj.fft_end);
             obj.fft_f = [0:obj.fft_N-1]*obj.o_fs/obj.fft_N;
-            obj.fft_s = obj.o_s(obj.fft_start:obj.fft_start+obj.fft_N-1);
+            obj.fft_s = obj.o_s(obj.fft_start:obj.fft_end);
             obj.fft_y = abs(fft(obj.fft_s));
             fft_t = obj.fft_t;
             fft_s = obj.fft_s;
@@ -217,9 +234,9 @@ classdef SiSy
                 N uint64 = obj.o_Np % The amount of samples from the offset x(offset:offset+N-1)
             end
             offset = offset + 1;
-            obj.conv_t = obj.o_t(offset:offset+N);
+            obj.conv_t = obj.o_t(offset:offset+N-1);
             obj.conv_s = conv(obj.o_s,h);
-            obj.conv_s = obj.conv_s(offset:offset+N);
+            obj.conv_s = obj.conv_s(offset:offset+N-1);
             conv_t = obj.conv_t;
             conv_s = obj.conv_s;
         end

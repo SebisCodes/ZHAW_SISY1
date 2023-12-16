@@ -79,9 +79,6 @@ grid;
 %% Convolution (Faltung)
 clear; close all; clc;
 
-[x,fs] = audioread('aufgabe_4.wav');
-x = x'; % Column to row
-
 sisyObj = SiSy; % Init SiSy Object
 sisyObj = sisyObj.addWav("aufgabe_4.wav"); % Second param is the period length in seconds
 [t,s,f,N] = sisyObj.getSignal(); % Get the signal and its frequency and sammple amount
@@ -94,7 +91,7 @@ h = (sisyObj.o_Ts/tau) * exp(-t/tau);% Impulse response
 
 disp(sisyObj); % Show values of the sisy object
 
-subplot(2,1,1), plot(t,s,conv_t, conv_s);grid; % Plot signal and convolution
+subplot(1,1,1), plot(t,s,conv_t, conv_s);grid; % Plot signal and convolution
 
 
 
